@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <title>Document</title>
+    <style type="text/css">
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        body{
+            background-color: #333;
+            font-family: "Microsoft Yahei";
+        }
+        .waterfall{
+            width: 880px;
+            position: relative;
+            margin: 0 auto;
+            padding-bottom: 30px;
+        }
+        .loading{
+            background: url(images/loading.gif) no-repeat center bottom;
+        }
+        .feed-item{
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 1px 1px 1px black;
+            position: absolute;
+            width: 260px;
+            top: 0;
+            left: 0;
+            padding: 10px;
+            /*display: none;*/
+        }
+        .feed-item img{
+            width: 260px;
+        }
+        .feed-item .biaoti{
+            line-height: 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .feed-item .neirong{
+            line-height: 150%;
+            font-size: 16px;
+
+        }
+        .feed-item .zuozhe{
+            float: right;
+            color:orange;
+        }
+        .end{
+            display: none;
+            font-size: 44px;
+        }
+    </style>
+</head>
+<body>
+<div class="waterfall">
+
+</div>
+<div class="end">
+    到最后了亲！
+</div>
+<script type="text/javascript" src="jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="underscore.js"></script>
+
+
+ <!--模板 -->
+<script type="type/template" id="feed-template">
+    <div class="feed-item">
+        <p>
+            <img src="<%= imgurl %>" alt="" />
+        </p>
+        <p class="biaoti">
+            <%= title %>
+        </p>
+        <p class="neirong">
+            <%= content %>
+        </p>
+        <p class="zuozhe">
+            <%= author %>
+        </p>
+    </div>
+</script>
+
+<script type="text/javascript">
+
+var $waterfall = $(".waterfall");
+/*得到模版*/
+    var templateString = $("#feed-template").html();
+
+    /*准备模版函数*/
+    var compile = _.template(templateString);
+
+    /*准备高度的数组*/
+
+    var colAllHeight = [0,0,0];
+
+    var pagenum = 1;
+
+    getAndRender(1);
+
+    var lock = true;
+
+//窗口卷动监听
+$(window).scroll(function(){
+    var scrollTop = $(window).scrollTop();
+    var windowHeight = $(window).height();
+    var documentHeight = $(document).height();
+    if(documentHeight - windowHeight - scrollTop < 200 && lock){
+        lock = false;
+        pagenum ++;
+        getAndRender(pagenum);
+    }
+});
+
+    function getAndRender(pagenum){
+
+            /*加载前显示动画 */
+        $waterfall.addClass("loading")
+        /*请求ajax*/
+        $.get("json/json"+pagenum + ".txt",function(data){
+
+            var dataJSON = JSON.parse(data);
+
+            var dictionaryArray = dataJSON.news;
+
+            console.log(dictionaryArray)
+
+            /*如果数组为空就表示到最后了 我们的判断标准是什么呢是后天返回的数据，我们根据数据的返回的结果来判定，我们是不是要请求数据如果返回的是空我们将不返回数据小菊花消失*/
+            if(dictionaryArray == 0){
+                $(".end").show();
+                $waterfall.removeClass("loading");
+            }
+
+
+            /*遍历字典 */
+            for(var i = 0 ; i < dictionaryArray.length; i ++){
+                var thisDictionary = dictionaryArray[i];
+                /*马上发出这个字典里的图片的请求*/
+
+                var image = new Image();
+
+                image.src = thisDictionary.imgurl;
+                image.index = i;
+                /*保存一下序列号*/
+                /*如果图片加载完了，然后*/
+                $(image).load(function(){
+
+
+                    /*那个图片加载完了就要注入那个字典*/
+
+                    var compileString = compile(dictionaryArray[this.index]);
+
+                    /*得到这个盒子*/
+                    var $box = $(compileString);
+
+                    $waterfall.append($box);
+                    /*寻找最小的列*/
+                    var min = _.min(colAllHeight);
+
+                    var minIndex = _.indexOf(colAllHeight,min);
+                    /*使用绝对的定位*/
+                    $box.css("left",300 * minIndex);
+                    $box.css("top",colAllHeight[minIndex]+20 )
+
+
+                    colAllHeight[minIndex] += $box.outerHeight() + 20;
+                    $box.fadeIn();
+
+                    /*让父盒子有高度*/
+                    $waterfall.css("height", _.max(colAllHeight))
+                    $waterfall.removeClass("loading");
+
+                    /*加载完毕之后打开锁*/
+                    lock =  true;
+
+                })
+
+            }
+
+
+        })
+    }
+
+
+
+
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
